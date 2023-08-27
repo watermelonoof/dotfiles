@@ -1,0 +1,31 @@
+#!/bin/bash
+
+function send_notification() {
+	vol="$(wpctl get-volume @DEFAULT_AUDIO_SINK@)"
+	[ "$vol" != "${vol%\[MUTED\]}" ] && \
+		dunstify -a "changevol" -u low -r 4392 -i volume-mute -t 2000 "Muted" && \
+		exit
+	vol="$(awk '{print $2*100}' <<< ${vol})"
+	[ "$vol" == "0" ] && icon="off" || icon=$1
+	dunstify -a "changevol" -u low -r 4392 -h int:value:"$vol" -i "volume-$icon" "Volume: ${vol}%" -t 2000
+}
+
+case $1 in
+	up)
+		wpctl set-volume -l 2.0 @DEFAULT_AUDIO_SINK@ 5%+
+		wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
+		pkill -RTMIN+10 dwmblocks
+		send_notification high
+		;;
+	down)
+		wpctl set-volume -l 2.0 @DEFAULT_AUDIO_SINK@ 5%-
+		wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
+		pkill -RTMIN+10 dwmblocks
+		send_notification low
+		;;
+	mute)
+		wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+		pkill -RTMIN+10 dwmblocks
+		send_notification high
+		;;
+esac

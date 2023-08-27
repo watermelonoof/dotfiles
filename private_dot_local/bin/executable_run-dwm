@@ -1,0 +1,11 @@
+#!/bin/zsh
+
+(exec dwmblocks 2> /home/bryan/.dwmblocks.log) &
+exec sxhkd &
+exec dunst &
+exec picom --no-frame-pacing &
+# exec xcompmgr -c -C -f -I.03 -O.03 -r7 -o.75 -l-7 -t-7 &
+(wal -R; /home/bryan/.local/bin/apply_statusbar_color &) &
+exec nitrogen --restore &
+(sleep 2; pkill -RTMIN+10 dwmblocks) &
+exec dwm 2> ~/.dwm.log

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cat $HOME/.cache/wal/colors.Xresources > $HOME/.wal.Xresources
+xrdb -merge $HOME/.wal.Xresources
+xdotool key super+F5

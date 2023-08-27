@@ -1,0 +1,8 @@
+XF86Audio{LowerVolume,RaiseVolume}
+	changevol {down,up}
+
+XF86AudioMute
+	changevol mute	
+
+XF86MonBrightness{Down,Up}
+	changebright {down,up}
