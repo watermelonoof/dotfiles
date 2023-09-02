@@ -5,22 +5,31 @@
 # Show 🔒 if a vpn connection is active
 
 case $BLOCK_BUTTON in
-	1) "$TERMINAL" -e nmtui; pkill -RTMIN+4 dwmblocks ;;
-	3) notify-send "🌐 Internet module" "\- Click to connect
-❌: wifi disabled
-📡: no wifi connection
-📶: wifi connection with quality
-❎: no ethernet
-🌐: ethernet working
-🔒: vpn is active
+	1) "kitty" -e nmtui; pkill -RTMIN+4 dwmblocks ;;
+	3) dunstify -a "sb-internet" -u low -r 6666 -t 10000 "🌐 Internet module" "Click to connect
+󰤮  wifi disabled
+󰤭  no wifi connection
+󰤨  wifi connected
+󰈀  ethernet working
+󰌾  vpn is active
 " ;;
-	6) "$TERMINAL" -e "$EDITOR" "$0" ;;
+	6) "kitty" -e "nvim" "$0" ;;
 esac
 
-if grep -xq 'up' /sys/class/net/w*/operstate 2>/dev/null ; then
-	wifiicon="$(awk '/^\s*w/ { print "📶", int($3 * 100 / 70) "% " }' /proc/net/wireless)"
-elif grep -xq 'down' /sys/class/net/w*/operstate 2>/dev/null ; then
-	grep -xq '0x1003' /sys/class/net/w*/flags && wifiicon="📡 " || wifiicon="❌ "
+# Wifi
+if [ "$(cat /sys/class/net/w*/operstate 2>/dev/null)" = 'up' ] ; then
+	# wifiicon="$(awk '/^\s*w/ { print "📶", int($3 * 100 / 70) "% " }' /proc/net/wireless)"
+	stat="$(cat /proc/net/wireless)"
+	wifiicon="$(echo "$stat" | awk '/^\s*w/ { print ($4 >= -55 ? "󰤨 " : $4 >= -66 ? "󰤥 " : $4 >= -77 ? "󰤢 " : $4 >= -88 ? "󰤟 " : "󰤯 ")}')"
+	ssid="$(iw dev $(echo "$stat" | grep '^\s*w' | cut -d: -f1) link | awk '/SSID:/ { print $2 " " }')"
+elif [ "$(cat /sys/class/net/w*/operstate 2>/dev/null)" = 'down' ] ; then
+	[ "$(cat /sys/class/net/w*/flags 2>/dev/null)" = '0x1003' ] && wifiicon="󰤭 " || wifiicon="󰤮 "
 fi
 
-printf "%s%s%s\n" "$wifiicon" "$(sed "s/down/❎/;s/up/🌐/" /sys/class/net/e*/operstate 2>/dev/null)" "$(sed "s/.*/🔒/" /sys/class/net/tun*/operstate 2>/dev/null)"
+# Ethernet
+[ "$(cat /sys/class/net/e*/operstate 2>/dev/null)" = 'up' ] && ethericon="󰈀 " # || ethericon="󰈂"
+
+# TUN
+[ -n "$(cat /sys/class/net/tun*/operstate 2>/dev/null)" ] && tunicon="󰌾 "
+
+printf "%s%s%s%s\n" "$tunicon" "$ethericon" "$wifiicon" "$ssid"

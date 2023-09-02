@@ -1,17 +1,17 @@
 #!/bin/bash
 
 function send_notification() {
-	bright=$(printf '%.f\n' $(xbacklight -get))
+	bright=$(printf '%.0f\n' $(brillo -G))
 	dunstify -a "changebright" -u low -r 4170 -h int:value:"$bright" -i "bright-$1" "Brightness: ${bright}%" -t 2000
 }
 
 case $1 in
 	up)
-		xbacklight -inc 5
+		brillo -u 150000 -A ${2:-5}
 		send_notification high
 		;;
 	down)
-		xbacklight -dec 5
+		brillo -u 150000 -U ${2:-5}
 		send_notification low
 		;;
 esac

@@ -1,42 +1,56 @@
 #!/bin/sh
-
-# Prints all batteries, their percentage remaining and an emoji corresponding
-# to charge status (🔌 for plugged up, 🔋 for discharging on battery, etc.).
-
 case $BLOCK_BUTTON in
-	3) notify-send "🔋 Battery module" "🔋: discharging
-🛑: not charging
-♻: stagnant charge
-🔌: charging
-⚡: charged
-❗: battery very low!
-- Scroll to change adjust xbacklight." ;;
-	4) xbacklight -inc 10 ;;
-	5) xbacklight -dec 10 ;;
-	6) "$TERMINAL" -e "$EDITOR" "$0" ;;
+	1) dunstify -a "sb-battery" -u low -r 2222 -t 10000 "🔋 Battery module" "󰁾 discharging
+󰢝 charging
+Scroll to change adjust brightness." ;;
+	4) changebright up 2 ;;
+	5) changebright down 2 ;;
+	6) "kitty" -e "nvim" "$0" ;;
 esac
 
-# Loop through all attached batteries and format the info
-for battery in /sys/class/power_supply/BAT?*; do
-	# If non-first battery, print a space separator.
-	[ -n "${capacity+x}" ] && printf " "
-	# Sets up the status and capacity
-	case "$(cat "$battery/status" 2>&1)" in
-		"Full") status="⚡" ;;
-		"Discharging") status="🔋" ;;
-		"Charging") status="🔌" ;;
-		"Not charging") status="🛑" ;;
-		"Unknown") status="♻️" ;;
-		*) exit 1 ;;
-	esac
-	capacity="$(cat "$battery/capacity" 2>&1)"
-	power="$(echo - | awk "{printf \"%.1f\", \
-		$(( 	$(cat $battery/current_now) * \
-  			$(cat $battery/voltage_now) \
-		)) / 1000000000000 }")"
-	# Will make a warn variable if discharging and low
-	[ "$status" = "🔋" ] && [ "$capacity" -le 25 ] && warn="❗"
-	# Prints the info
-	printf "%s%s%d%% %.1fW" "$status" "$warn" "$capacity" "$power"; unset warn
+battery="/sys/class/power_supply/BAT0"
+capacity="$(cat "$battery/capacity" 2>&1)"
+power="$(echo - | awk "{printf \"%.1f\", \
+		$(( $(cat "$battery/current_now" 2>/dev/null || echo 0) * \
+ 			$(cat "$battery/voltage_now" 2>/dev/null || echo 1) \
+			)) / 1000000000000 }")"
 
-done && printf "\\n"
+# Sets up the status and capacity
+case "$(cat "$battery/status" 2>&1)" in
+	"Discharging"|"Not charging")
+		power="-$power"
+		case 1 in
+			$((capacity < 10)) ) status="󱃍"  ;; # 0-9
+			$((capacity < 20)) ) status="󰁺"  ;; # 10-19 
+			$((capacity < 30)) ) status="󰁻"  ;; # 20-29
+			$((capacity < 40)) ) status="󰁼"  ;; # 30-39
+			$((capacity < 50)) ) status="󰁽"  ;; # 40-49
+			$((capacity < 60)) ) status="󰁾"  ;; # 50-59
+			$((capacity < 70)) ) status="󰁿"  ;; # 60-69
+			$((capacity < 80)) ) status="󰂀"  ;; # 70-79
+			$((capacity < 90)) ) status="󰂁"  ;; # 80-89
+			$((capacity < 100)) ) status="󰂂" ;; # 90-99
+			* ) status="󰁹" 					 ;; # 100
+		esac
+		;;	
+	"Full"|"Charging")
+		case 1 in
+			$((capacity < 10)) ) status="󰢜"  ;; # 0-9
+			$((capacity < 20)) ) status="󰢜"  ;; # 10-19 
+			$((capacity < 30)) ) status="󰂆"  ;; # 20-29
+			$((capacity < 40)) ) status="󰂇"  ;; # 30-39
+			$((capacity < 50)) ) status="󰂈"  ;; # 40-49
+			$((capacity < 60)) ) status="󰢝"  ;; # 50-59
+			$((capacity < 70)) ) status="󰂉"  ;; # 60-69
+			$((capacity < 80)) ) status="󰢞"  ;; # 70-79
+			$((capacity < 90)) ) status="󰂊"  ;; # 80-89
+			$((capacity < 100)) ) status="󰂋" ;; # 90-99
+			* ) status="󰂅" 					 ;; # 100
+		esac
+		;;
+	"Unknown") status="󰂑" ;;
+	*) exit 1 ;;
+esac
+
+# Prints the info
+printf "%s%d%% %.1fW\n" "$status" "$capacity" "$power"; unset warn
